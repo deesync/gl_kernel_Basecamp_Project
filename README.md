@@ -93,7 +93,7 @@ classDiagram
     `Business Logic Module` ..> `Sensor Driver`
     `Business Logic Module` ..> `Display Driver`
 
-    `Sensor Driver` --> `MPU6050 Sensor Device` : I2C/SMBus Subsystem
-    `Display Driver` --> `SSD1306 OLED Display` : I2C/SMBus Subsystem
+    `Sensor Driver` --> `MPU6050 Sensor Device` : I2C/SMBus
+    `Display Driver` --> `SSD1306 OLED Display` : I2C/SMBus
 ```
 

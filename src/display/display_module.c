@@ -11,13 +11,11 @@
 
 #include "display_module.h"
 
-#define MP "Display: "			/* Log Message Prefix */
+#define MP KBUILD_MODNAME ": "		/* Log Message Prefix */
 
 #define I2C_BUS 1			/* I2C bus number */
 #define I2C_DEVICE_NAME "bc-ssd1306"	/* Our device driver name */
 
-
-/* The static parts */
 
 struct i2c_client *ssd1306_client;
 
@@ -241,12 +239,12 @@ static int ssd1306_probe(struct i2c_client *drv_client,
 
 static int ssd1306_remove(struct i2c_client *drv_client)
 {
-	dev_info(&drv_client->dev, "removing i2c driver...\n");
-
 	display_clear();
 	ssd1306_i2c_cmd(SSD1306_DISPLAYOFF);
 
 	ssd1306_client = NULL;
+
+	dev_info(&drv_client->dev, "i2c driver removed\n");
 	return 0;
 }
 
@@ -275,7 +273,7 @@ static int __init display_mod_init(void)
 	int ret;
 	struct i2c_adapter *adapter = i2c_get_adapter(I2C_BUS);
 
-	pr_info(MP "module initialization...\n");
+	pr_info(MP "initialization...\n");
 
 	pr_info(MP "adapter = 0x%p\n", adapter);
 
@@ -314,12 +312,13 @@ static void __exit display_mod_exit(void)
 {
 	i2c_unregister_device(ssd1306_client);
 	i2c_del_driver(&ssd1306_i2c_driver);
-	pr_info(MP "driver removed\n");
+	pr_info(MP "module removed\n");
 }
 
 module_init(display_mod_init);
 module_exit(display_mod_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Linux Bootcamp Project Display Module");
-MODULE_AUTHOR("Vlad Dee <deesyync@gmail.com>");
+MODULE_DESCRIPTION("Linux Kernel Bootcamp Project: Display Module");
+MODULE_AUTHOR("Vlad Degtyarov <deesyync@gmail.com>");
+MODULE_VERSION("0.1");

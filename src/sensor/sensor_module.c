@@ -10,19 +10,17 @@
 
 #include "sensor_module.h"
 
-#define MODULE_NAME "Sensor"		/* Module shortname for logging */
-#define MP MODULE_NAME ": "		/* Log Message Prefix */
+#define MP KBUILD_MODNAME ": "		/* Log Message Prefix */
 
 #define I2C_BUS 1			/* I2C bus number */
 #define I2C_DEVICE_NAME "bc-mpu6050"	/* Our device driver name */
 
 
-
 struct i2c_client *mpu6050_client;
 
 /**
- * bc_poll_sensor_raw_data - polling sensor registers and filling 
- * data structure with raw data of accelerometer and gyroscope
+ * bc_poll_sensor_raw_data - polling sensor registers and filling data structure 
+ *                           with raw data of accelerometer and gyroscope
  * @data: data structure pointer
  *
  * implementation for MPU-6050 I2C Device
@@ -148,7 +146,7 @@ static int mpu6050_probe(struct i2c_client *drv_client,
 
 static int mpu6050_remove(struct i2c_client *drv_client)
 {
-	mpu6050_client = 0;
+	mpu6050_client = NULL;
 
 	dev_info(&drv_client->dev, "i2c driver removed\n");
 	return 0;
@@ -179,7 +177,7 @@ static int __init sensor_mod_init(void)
 	int ret;
 	struct i2c_adapter *adapter = i2c_get_adapter(I2C_BUS);
 
-	pr_info(MP "module initialization...\n");
+	pr_info(MP "initialization...\n");
 
 	pr_info(MP "adapter = 0x%p\n", adapter);
 
@@ -217,12 +215,13 @@ static void __exit sensor_mod_exit(void)
 {
 	i2c_unregister_device(mpu6050_client);
 	i2c_del_driver(&mpu6050_i2c_driver);
-	pr_info(MP "module exited\n");
+	pr_info(MP "module removed\n");
 }
 
 module_init(sensor_mod_init);
 module_exit(sensor_mod_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION("Linux Bootcamp Project Sensor Module");
-MODULE_AUTHOR("Vlad Dee <deesyync@gmail.com>");
+MODULE_DESCRIPTION("Linux Kernel Bootcamp Project: Sensor Module");
+MODULE_AUTHOR("Vlad Degtyarov <deesyync@gmail.com>");
+MODULE_VERSION("0.1");

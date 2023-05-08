@@ -2,7 +2,7 @@ obj-m += sensor/sensor_module.o
 obj-m += display/display_module.o
 obj-m += logic_module.o
 
-logic_module-objs := logic.o fxpt_atan2.o
+logic_module-objs := logic.o logic_mode_switcher.o fxpt_atan2.o
 
 KDIR ?= /home/user/pi/linux
 

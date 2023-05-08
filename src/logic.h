@@ -14,6 +14,7 @@ struct logic_mode {
 };
 
 struct logic_state {
+	struct kobject *kobj;
 	bool switching;
 	struct logic_mode *mode;
 };

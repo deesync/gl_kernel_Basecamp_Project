@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: GPL
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/workqueue.h>
@@ -9,8 +12,26 @@
 #include "logic.h"
 #include "fxpt_math.h"
 
-#define MP KBUILD_MODNAME ": "		/* Log Message Prefix */
-#define INIT_DELAY 1000
+#define MP KBUILD_MODNAME ": "	/* Log Message Prefix */
+
+#define INIT_DELAY		1000
+
+#define SYSFS_NAME		"inclinometer"
+#define ACCEL_X_SYSFS_ATTR	accel_x_raw
+#define ACCEL_Y_SYSFS_ATTR	accel_y_raw
+#define ACCEL_Z_SYSFS_ATTR	accel_z_raw
+#define GYRO_X_SYSFS_ATTR	gyro_x_raw
+#define GYRO_Y_SYSFS_ATTR	gyro_y_raw
+#define GYRO_Z_SYSFS_ATTR	gyro_z_raw
+
+/*
+#define ACCEL_X_CB_SYSFS_ATTR	accel_x_calibbias
+#define ACCEL_Y_CB_SYSFS_ATTR	accel_y_calibbias
+#define ACCEL_Z_CB_SYSFS_ATTR	accel_z_calibbias
+#define GYRO_X_CB_SYSFS_ATTR	gyro_x_calibbias
+#define GYRO_Y_CB_SYSFS_ATTR	gyro_y_calibbias
+#define GYRO_Z_CB_SYSFS_ATTR	gyro_z_calibbias
+*/
 
 static struct delayed_work work_update;
 static struct logic_state state;
@@ -44,7 +65,8 @@ static struct logic_mode display_raw_mode = {
 /* End of Modes definitions */
 
 
-/* Display Raw Data calls */
+#pragma region /* Display Raw Data calls */
+
 static int display_raw_prepare(struct logic_mode *mode)
 {
 	bc_display_clear();
@@ -92,10 +114,10 @@ static int display_raw(struct logic_mode *mode)
 
 	return 0;
 }
-/* End of Display Raw Data calls */
+#pragma endregion
 
 
-/* Display Inclinometer calls */
+#pragma region /* Display Inclinometer calls */
 static int display_inclinometer_prepare(struct logic_mode *mode)
 {
 	bc_display_clear();
@@ -132,7 +154,88 @@ static int display_inclinometer(struct logic_mode *mode)
 
 	return 0;
 }
-/* End of Display Inclinometer calls */
+#pragma endregion
+
+
+#pragma region /* Sysfs interface */
+static ssize_t
+accel_x_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	s16 val;
+
+	bc_poll_sensor_raw_value(&val, accel_x);
+	return snprintf(buf, PAGE_SIZE, "%d\n", val);
+}
+
+static ssize_t
+accel_y_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	s16 val;
+
+	bc_poll_sensor_raw_value(&val, accel_y);
+	return snprintf(buf, PAGE_SIZE, "%d\n", val);
+}
+
+static ssize_t
+accel_z_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	s16 val;
+
+	bc_poll_sensor_raw_value(&val, accel_z);
+	return snprintf(buf, PAGE_SIZE, "%d\n", val);
+}
+
+static ssize_t
+gyro_x_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	s16 val;
+
+	bc_poll_sensor_raw_value(&val, gyro_x);
+	return snprintf(buf, PAGE_SIZE, "%d\n", val);
+}
+
+static ssize_t
+gyro_y_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	s16 val;
+
+	bc_poll_sensor_raw_value(&val, gyro_y);
+	return snprintf(buf, PAGE_SIZE, "%d\n", val);
+}
+
+static ssize_t
+gyro_z_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	s16 val;
+
+	bc_poll_sensor_raw_value(&val, gyro_z);
+	return snprintf(buf, PAGE_SIZE, "%d\n", val);
+}
+
+static struct kobj_attribute accel_x_attr =
+	__ATTR(ACCEL_X_SYSFS_ATTR, 0444, accel_x_show, NULL);
+static struct kobj_attribute accel_y_attr =
+	__ATTR(ACCEL_Y_SYSFS_ATTR, 0444, accel_y_show, NULL);
+static struct kobj_attribute accel_z_attr =
+	__ATTR(ACCEL_Z_SYSFS_ATTR, 0444, accel_z_show, NULL);
+
+static struct kobj_attribute gyro_x_attr =
+	__ATTR(GYRO_X_SYSFS_ATTR, 0444, gyro_x_show, NULL);
+static struct kobj_attribute gyro_y_attr =
+	__ATTR(GYRO_Y_SYSFS_ATTR, 0444, gyro_y_show, NULL);
+static struct kobj_attribute gyro_z_attr =
+	__ATTR(GYRO_Z_SYSFS_ATTR, 0444, gyro_z_show, NULL);
+
+static struct attribute *attrs[] = {
+	&accel_x_attr.attr, &accel_y_attr.attr, &accel_z_attr.attr,
+	&gyro_x_attr.attr, &gyro_y_attr.attr, &gyro_z_attr.attr,
+	NULL,
+};
+
+static struct attribute_group attr_group = {
+	.attrs = attrs,
+};
+#pragma endregion
 
 
 /* Magic cycle */
@@ -150,10 +253,25 @@ static void refresh(struct work_struct *work)
 			      msecs_to_jiffies(state.mode->cycle_delay));
 }
 
-
 static int __init logic_mod_init(void)
 {
+	int ret;
+
 	pr_info(MP "initialization...\n");
+
+	/* Creating sysfs kobj */
+	state.kobj = kobject_create_and_add(SYSFS_NAME, NULL);
+	if (!state.kobj) {
+		pr_err(MP "cannot create kobject\n");
+		return -ENOMEM;
+	}
+
+	/* Creating sysfs group */
+	ret = sysfs_create_group(state.kobj, &attr_group);
+	if (ret) {
+		kobject_put(state.kobj);
+		return ret;
+	}
 
 	switch_mode(&state, &display_inclinometer_mode);
 	// switch_mode(&state, &display_raw_mode);
@@ -168,6 +286,9 @@ static void __exit logic_mod_exit(void)
 {
 	cancel_delayed_work_sync(&work_update);
 
+	sysfs_remove_group(state.kobj, &attr_group);
+	kobject_put(state.kobj);
+
 	pr_info(MP "module removed\n");
 }
 
@@ -178,3 +299,5 @@ MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Linux Kernel Bootcamp Project: Business Logic Module");
 MODULE_AUTHOR("Vlad Degtyarov <deesyync@gmail.com>");
 MODULE_VERSION("0.2");
+
+#pragma GCC diagnostic pop

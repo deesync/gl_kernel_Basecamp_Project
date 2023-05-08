@@ -9,8 +9,8 @@
 
 struct logic_mode {
 	int cycle_delay;
-	int (*prepare)(struct logic_mode *);
-	int (*cycle)(struct logic_mode *);
+	int (*prepare)(struct logic_mode *mode);
+	int (*cycle)(struct logic_mode *mode);
 };
 
 struct logic_state {

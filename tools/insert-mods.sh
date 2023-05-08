@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# ACCEL_CALIBRATION="-850,920,900"
+# GYRO_CALIBRATION="567,1,183"
+
 SENSOR_MOD=sensor_module
 DISPLAY_MOD=display_module
 LOGIC_MOD=logic_module
@@ -26,10 +29,14 @@ fi
 sudo insmod ${DISPLAY_MOD}.ko
 
 # Business Logic Module
-sudo insmod ${LOGIC_MOD}.ko
-
+(
+[ -n "${ACCEL_CALIBRATION}" ] && ACCEL_CALIB_PARAM="accel_calib=${ACCEL_CALIBRATION}"
+[ -n "${GYRO_CALIBRATION}" ] && GYRO_CALIB_PARAM="gyro_calib=${GYRO_CALIBRATION}"
+set -x
+sudo insmod ${LOGIC_MOD}.ko ${ACCEL_CALIB_PARAM} ${GYRO_CALIB_PARAM}
+)
 
 lsmod | head -n 5
 echo
-dmesg --color=always | tail -n 20
+dmesg --color=always | tail -n 25
 

@@ -15,6 +15,14 @@
 static struct delayed_work work_update;
 static struct logic_state state;
 
+static int accel_calib[3] = { 0, 0, 0 };
+static int gyro_calib[3] = { 0, 0, 0 };
+
+module_param_array(accel_calib, int, NULL, 0);
+MODULE_PARM_DESC(accel_calib, "Accelerometer calibration bias");
+module_param_array(gyro_calib, int, NULL, 0);
+MODULE_PARM_DESC(gyro_calib, "Gyroscope calibration bias");
+
 
 /* Modes definitions */
 static int display_raw_prepare(struct logic_mode *mode);
@@ -95,28 +103,31 @@ static int display_inclinometer_prepare(struct logic_mode *mode)
 	bc_display_print(0, 0, &bolder_font16, "INCLINOMETER");
 	bc_display_print(5, 2, &fixed_font16, "Tilt Y:");
 	bc_display_print(5, 5, &fixed_font16, "Tilt X:");
-	
+
 	return 0;
 }
 
 static int display_inclinometer(struct logic_mode *mode)
 {
 	struct sensor_data raw_data;
+	struct sensor_data clb;
 	static char s[5];
 
 	bc_poll_sensor_raw_data(&raw_data);
+
+	clb.accel_x = raw_data.accel_x + accel_calib[0];
+	clb.accel_y = raw_data.accel_y + accel_calib[1];
+	clb.accel_z = raw_data.accel_z + accel_calib[2];
 
 	// angle += s_data.gyro_y/131*jiffies_to_msecs(jiffies-pin);
 	// pin = jiffies;
 
 	// stm32_atan2(s_data.accel_y, s_data.accel_x) / (CORDIC_PI / 180);
 
-	sprintf(s, "%4d",
-		fxpt_atan2(raw_data.accel_y, raw_data.accel_x)*180 / FXPT_PI);
+	sprintf(s, "%4d", fxpt_atan2(clb.accel_y, clb.accel_x)*180 / FXPT_PI);
 	bc_display_print(55, 2, &lcd_font24, s);
 
-	sprintf(s, "%4d",
-		fxpt_atan2(raw_data.accel_x, raw_data.accel_z)*180 / FXPT_PI);
+	sprintf(s, "%4d", fxpt_atan2(clb.accel_x, clb.accel_z)*180 / FXPT_PI);
 	bc_display_print(55, 5, &lcd_font24, s);
 
 	return 0;
@@ -131,7 +142,7 @@ static void refresh(struct work_struct *work)
 
 	res = process_state(&state);
 	if (res < 0) {
-		pr_err(MP "uh oh! something wrong with logic state!\n");
+		pr_err(MP "uh oh! something wrong with processing state!\n");
 		return;
 	}
 

@@ -17,24 +17,14 @@
 #define INIT_DELAY		1000
 
 #define SYSFS_NAME		"inclinometer"
-#define ACCEL_X_SYSFS_ATTR	accel_x_raw
-#define ACCEL_Y_SYSFS_ATTR	accel_y_raw
-#define ACCEL_Z_SYSFS_ATTR	accel_z_raw
-#define GYRO_X_SYSFS_ATTR	gyro_x_raw
-#define GYRO_Y_SYSFS_ATTR	gyro_y_raw
-#define GYRO_Z_SYSFS_ATTR	gyro_z_raw
-
-/*
-#define ACCEL_X_CB_SYSFS_ATTR	accel_x_calibbias
-#define ACCEL_Y_CB_SYSFS_ATTR	accel_y_calibbias
-#define ACCEL_Z_CB_SYSFS_ATTR	accel_z_calibbias
-#define GYRO_X_CB_SYSFS_ATTR	gyro_x_calibbias
-#define GYRO_Y_CB_SYSFS_ATTR	gyro_y_calibbias
-#define GYRO_Z_CB_SYSFS_ATTR	gyro_z_calibbias
-*/
-
-static struct delayed_work work_update;
-static struct logic_state state;
+#define ACCEL_X_SYSFS_ATTR	accel_x
+#define ACCEL_Y_SYSFS_ATTR	accel_y
+#define ACCEL_Z_SYSFS_ATTR	accel_z
+#define GYRO_X_SYSFS_ATTR	gyro_x
+#define GYRO_Y_SYSFS_ATTR	gyro_y
+#define GYRO_Z_SYSFS_ATTR	gyro_z
+#define TEMPERATURE_SYSFS_ATTR	temp
+#define MODE_SYSFS_ATTR		mode
 
 static int accel_calib[3] = { 0, 0, 0 };
 static int gyro_calib[3] = { 0, 0, 0 };
@@ -45,7 +35,7 @@ module_param_array(gyro_calib, int, NULL, 0);
 MODULE_PARM_DESC(gyro_calib, "Gyroscope calibration bias");
 
 
-/* Modes definitions */
+#pragma region /* State & Modes */
 static int display_raw_prepare(struct logic_mode *mode);
 static int display_raw(struct logic_mode *mode);
 static int display_inclinometer_prepare(struct logic_mode *mode);
@@ -62,7 +52,18 @@ static struct logic_mode display_raw_mode = {
 	.prepare = display_raw_prepare,
 	.cycle = display_raw,
 };
-/* End of Modes definitions */
+
+static struct logic_mode *modes[] = {
+	&display_raw_mode,
+	&display_inclinometer_mode,
+	NULL
+};
+
+static struct logic_state state = {
+	.mode_count = (sizeof(modes) / sizeof(modes[0])) - 1,
+	.current_mode = 0,
+};
+#pragma endregion
 
 
 #pragma region /* Display Raw Data calls */
@@ -212,6 +213,36 @@ gyro_z_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 	return snprintf(buf, PAGE_SIZE, "%d\n", val);
 }
 
+static ssize_t
+temp_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	s16 val;
+
+	bc_poll_sensor_temperature(&val);
+	return snprintf(buf, PAGE_SIZE, "%d\n", val);
+}
+
+static ssize_t
+mode_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", state.current_mode);
+}
+
+static ssize_t 
+mode_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf,
+	   size_t count)
+{
+	u8 mode;
+
+	if (kstrtou8(buf, 0, &mode) < 0 || mode > state.mode_count-1)
+		return -EPERM;
+
+	state.current_mode = mode;
+	switch_mode(&state, modes[state.current_mode]);
+
+	return count;
+}
+
 static struct kobj_attribute accel_x_attr =
 	__ATTR(ACCEL_X_SYSFS_ATTR, 0444, accel_x_show, NULL);
 static struct kobj_attribute accel_y_attr =
@@ -226,9 +257,17 @@ static struct kobj_attribute gyro_y_attr =
 static struct kobj_attribute gyro_z_attr =
 	__ATTR(GYRO_Z_SYSFS_ATTR, 0444, gyro_z_show, NULL);
 
+static struct kobj_attribute temp_attr =
+	__ATTR(TEMPERATURE_SYSFS_ATTR, 0444, temp_show, NULL);
+
+static struct kobj_attribute mode_attr =
+	__ATTR(MODE_SYSFS_ATTR, 0664, mode_show, mode_store);
+
 static struct attribute *attrs[] = {
 	&accel_x_attr.attr, &accel_y_attr.attr, &accel_z_attr.attr,
 	&gyro_x_attr.attr, &gyro_y_attr.attr, &gyro_z_attr.attr,
+	&temp_attr.attr,
+	&mode_attr.attr,
 	NULL,
 };
 
@@ -238,7 +277,9 @@ static struct attribute_group attr_group = {
 #pragma endregion
 
 
-/* Magic cycle */
+static struct delayed_work work_update;
+
+/* Magic loop */
 static void refresh(struct work_struct *work)
 {
 	int res;
@@ -272,13 +313,15 @@ static int __init logic_mod_init(void)
 		kobject_put(state.kobj);
 		return ret;
 	}
+	pr_info(MP "sysfs interface created at /sys/%s\n", SYSFS_NAME);
 
-	switch_mode(&state, &display_inclinometer_mode);
-	// switch_mode(&state, &display_raw_mode);
+	pr_info(MP "number of modes: %d\n", state.mode_count);
+	switch_mode(&state, modes[state.current_mode]);
 
 	INIT_DELAYED_WORK(&work_update, refresh);
 	schedule_delayed_work(&work_update, msecs_to_jiffies(INIT_DELAY));
 
+	pr_info(MP "initialization successful\n");
 	return 0;
 }
 

@@ -14,9 +14,11 @@ struct logic_mode {
 };
 
 struct logic_state {
-	struct kobject *kobj;
+	const size_t mode_count;
+	int current_mode;
 	bool switching;
 	struct logic_mode *mode;
+	struct kobject *kobj;
 };
 
 int switch_mode(struct logic_state *state, struct logic_mode *mode);

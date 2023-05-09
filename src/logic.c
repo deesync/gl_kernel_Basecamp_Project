@@ -14,25 +14,15 @@
 
 #define MP KBUILD_MODNAME ": "	/* Log Message Prefix */
 
-#define INIT_DELAY		1000
-
-#define SYSFS_NAME		"inclinometer"
-#define ACCEL_X_SYSFS_ATTR	accel_x
-#define ACCEL_Y_SYSFS_ATTR	accel_y
-#define ACCEL_Z_SYSFS_ATTR	accel_z
-#define GYRO_X_SYSFS_ATTR	gyro_x
-#define GYRO_Y_SYSFS_ATTR	gyro_y
-#define GYRO_Z_SYSFS_ATTR	gyro_z
-#define TEMPERATURE_SYSFS_ATTR	temp
-#define MODE_SYSFS_ATTR		mode
+#define INIT_DELAY 1000
 
 static int accel_calib[3] = { 0, 0, 0 };
 static int gyro_calib[3] = { 0, 0, 0 };
 
 module_param_array(accel_calib, int, NULL, 0);
-MODULE_PARM_DESC(accel_calib, "Accelerometer calibration bias");
+MODULE_PARM_DESC(accel_calib, "Accelerometer calibration offsets");
 module_param_array(gyro_calib, int, NULL, 0);
-MODULE_PARM_DESC(gyro_calib, "Gyroscope calibration bias");
+MODULE_PARM_DESC(gyro_calib, "Gyroscope calibration offsets");
 
 
 #pragma region /* State & Modes */

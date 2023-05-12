@@ -1,8 +1,8 @@
 obj-m += sensor/sensor_module.o
 obj-m += display/display_module.o
-obj-m += logic_module.o
+obj-m += inclinometer.o
 
-logic_module-objs := logic.o logic_tools.o fxpt_atan2.o
+inclinometer-objs := logic.o logic_tools.o fxpt_atan2.o
 
 KDIR ?= /home/user/pi/linux
 

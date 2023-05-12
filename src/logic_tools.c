@@ -17,6 +17,16 @@ int switch_mode(struct logic_state *state, struct logic_mode *mode)
 	return 0;
 }
 
+int next_mode(struct logic_state *state)
+{
+	state->current_mode += 1;
+
+	if (state->current_mode >= state->mode_count - state->hidden_modes)
+		state->current_mode = 0;
+
+	return state->current_mode;
+}
+
 int process_state(struct logic_state *state)
 {
 	if (!state || !state->mode)

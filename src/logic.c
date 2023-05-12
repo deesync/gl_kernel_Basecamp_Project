@@ -5,6 +5,8 @@
 
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/gpio.h>
+#include <linux/interrupt.h>
 #include <linux/workqueue.h>
 
 #include "sensor/sensor_module.h"
@@ -12,17 +14,24 @@
 #include "logic.h"
 #include "fxpt_math.h"
 
-#define MP KBUILD_MODNAME ": "	/* Log Message Prefix */
+#define MP KBUILD_MODNAME ": "		/* Log Message Prefix */
 
-#define INIT_DELAY 1000
-
+/* Module parameters */
+static int a_button_pin = DEFAULT_A_BUTTON_GPIO_PIN;
 static int accel_calib[3] = { 0, 0, 0 };
 static int gyro_calib[3] = { 0, 0, 0 };
 
+module_param(a_button_pin, int, 0);
+MODULE_PARM_DESC(a_button_pin, "Action button GPIO pin");
+
 module_param_array(accel_calib, int, NULL, 0);
 MODULE_PARM_DESC(accel_calib, "Accelerometer calibration offsets");
+
 module_param_array(gyro_calib, int, NULL, 0);
 MODULE_PARM_DESC(gyro_calib, "Gyroscope calibration offsets");
+
+/* Work loop */
+static struct delayed_work work_loop;
 
 
 #pragma region /* State & Modes */
@@ -49,9 +58,11 @@ static struct logic_mode *modes[] = {
 	NULL
 };
 
+/* State init */
 static struct logic_state state = {
 	.mode_count = (sizeof(modes) / sizeof(modes[0])) - 1,
 	.current_mode = 0,
+	.hidden_modes = 0,
 };
 #pragma endregion
 
@@ -267,7 +278,20 @@ static struct attribute_group attr_group = {
 #pragma endregion
 
 
-static struct delayed_work work_update;
+/* Action button interrupt handler */
+static irqreturn_t a_button_isr(int irq, void *dev_id)
+{
+	static unsigned long timestamp;
+
+	if (jiffies - timestamp > BUTTON_DEBOUNCE_COOLDOWN) {
+		/* It's a light call. There's no need to schedule bottom half */
+		/* All heavy work will be done on the next work loop */
+		switch_mode(&state, modes[next_mode(&state)]);
+		timestamp = jiffies;
+	}
+
+	return IRQ_HANDLED;
+}
 
 /* Magic loop */
 static void refresh(struct work_struct *work)
@@ -276,11 +300,11 @@ static void refresh(struct work_struct *work)
 
 	res = process_state(&state);
 	if (res < 0) {
-		pr_err(MP "uh oh! something wrong with processing state!\n");
+		pr_err(MP "uh oh! something is wrong with processing state!\n");
 		return;
 	}
 
-	schedule_delayed_work(&work_update,
+	schedule_delayed_work(&work_loop,
 			      msecs_to_jiffies(state.mode->cycle_delay));
 }
 
@@ -300,25 +324,79 @@ static int __init logic_mod_init(void)
 	/* Creating sysfs group */
 	ret = sysfs_create_group(state.kobj, &attr_group);
 	if (ret) {
-		kobject_put(state.kobj);
-		return ret;
+		pr_err(MP "cannot create sysfs group\n");
+		goto r_kobj;
 	}
 	pr_info(MP "sysfs interface created at /sys/%s\n", SYSFS_NAME);
 
-	pr_info(MP "number of modes: %d\n", state.mode_count);
-	switch_mode(&state, modes[state.current_mode]);
+	/* Checking validity of GPIO pin */
+	if (!gpio_is_valid(a_button_pin)) {
+		pr_err(MP "GPIO %d is not valid\n", a_button_pin);
+		goto r_sysfs;
+	}
 
-	INIT_DELAYED_WORK(&work_update, refresh);
-	schedule_delayed_work(&work_update, msecs_to_jiffies(INIT_DELAY));
+	/* Request access to the GPIO pin */
+	ret = gpio_request(a_button_pin, A_BUTTON_IRQ_LABEL);
+	if (ret < 0) {
+		pr_err(MP "failed to request GPIO pin %d: %d\n",
+		       a_button_pin, ret);
+		goto r_sysfs;
+	}
+
+	/* Set the GPIO pin as an input with a pull-up resistor */
+	ret = gpio_direction_input(a_button_pin);
+	if (ret < 0) {
+		pr_err(MP "failed to set GPIO direction for pin %d: %d\n",
+		       a_button_pin, ret);
+		goto r_gpio;
+	}
+
+	/* Register the interrupt handler function */
+	ret = request_irq(gpio_to_irq(a_button_pin), a_button_isr,
+			  IRQF_TRIGGER_FALLING, A_BUTTON_IRQ_LABEL, NULL);
+	if (ret < 0) {
+		pr_err(MP "failed to register interrupt handler for pin %d: %d\n",
+		       a_button_pin, ret);
+		goto r_gpio;
+	}
+	pr_info(MP "action button interrupt handler registered on GPIO pin: %d\n",
+		a_button_pin);
+
+	/* Switching Mode */
+	pr_info(MP "number of modes: %d\n", state.mode_count);
+	ret = switch_mode(&state, modes[state.current_mode]);
+	if (ret < 0) {
+		pr_err(MP "cannot switch mode\n");
+		goto r_irq;		
+	}
+
+	/* Scheduling refresh loop */
+	INIT_DELAYED_WORK(&work_loop, refresh);
+	schedule_delayed_work(&work_loop, msecs_to_jiffies(INIT_DELAY));
 
 	pr_info(MP "initialization successful\n");
+
 	return 0;
+
+r_irq:
+	free_irq(gpio_to_irq(a_button_pin), NULL);
+r_gpio:
+	gpio_free(a_button_pin);
+r_sysfs:
+	sysfs_remove_group(state.kobj, &attr_group);
+r_kobj:
+	kobject_put(state.kobj);
+
+	return ret;
 }
 
 static void __exit logic_mod_exit(void)
 {
-	cancel_delayed_work_sync(&work_update);
+	cancel_delayed_work_sync(&work_loop);
+	flush_scheduled_work();
 
+	free_irq(gpio_to_irq(a_button_pin), NULL);
+	gpio_free(a_button_pin);
 	sysfs_remove_group(state.kobj, &attr_group);
 	kobject_put(state.kobj);
 

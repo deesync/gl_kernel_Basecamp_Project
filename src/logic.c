@@ -37,22 +37,30 @@ static struct delayed_work work_loop;
 #pragma region /* State & Modes */
 static int display_raw_prepare(struct logic_mode *mode);
 static int display_raw(struct logic_mode *mode);
+static int display_calib_prepare(struct logic_mode *mode);
+static int display_calib(struct logic_mode *mode);
 static int display_inclinometer_prepare(struct logic_mode *mode);
 static int display_inclinometer(struct logic_mode *mode);
 
 /* Modes init */
 static struct logic_mode modes[] = {
-	/* [0] -  Display Raw Sensor Data */
-	{
-		.cycle_delay = 20,
-		.prepare = display_raw_prepare,
-		.cycle = display_raw,
-	},
-	/* [1] -  Display Clinometer */
+	/* [0] -  Display Clinometer */
 	{
 		.cycle_delay = 20,
 		.prepare = display_inclinometer_prepare,
 		.cycle = display_inclinometer,
+	},
+	/* [1] -  Display Raw Sensor Data */
+	{
+		.cycle_delay = 50,
+		.prepare = display_raw_prepare,
+		.cycle = display_raw,
+	},
+	/* [2] -  Display Calibrated Sensor Data */
+	{
+		.cycle_delay = 50,
+		.prepare = display_calib_prepare,
+		.cycle = display_calib,
 	},
 };
 
@@ -65,7 +73,7 @@ static struct logic_state state = {
 #pragma endregion
 
 
-#pragma region /* Display Raw Data calls */
+#pragma region /* Display Raw Data Mode calls */
 
 static int display_raw_prepare(struct logic_mode *mode)
 {
@@ -116,8 +124,54 @@ static int display_raw(struct logic_mode *mode)
 }
 #pragma endregion
 
+#pragma region /* Display Calibrated Data Mode calls */
 
-#pragma region /* Display Inclinometer calls */
+static int display_calib_prepare(struct logic_mode *mode)
+{
+	bc_display_clear();
+
+	bc_display_print(11, 0, &fixed_font16, "Calibrated Data");
+
+	bc_display_print(SM_TXT_OFFSET, 2, &fixed_font8, "Accel X :");
+	bc_display_print(SM_TXT_OFFSET, 3, &fixed_font8, "Accel Y :");
+	bc_display_print(SM_TXT_OFFSET, 4, &fixed_font8, "Accel Z :");
+	bc_display_print(SM_TXT_OFFSET, 5, &fixed_font8, "Gyro X  :");
+	bc_display_print(SM_TXT_OFFSET, 6, &fixed_font8, "Gyro Y  :");
+	bc_display_print(SM_TXT_OFFSET, 7, &fixed_font8, "Gyro Z  :");
+
+	return 0;
+}
+
+static int display_calib(struct logic_mode *mode)
+{
+	struct sensor_data raw_data;
+	static char s[8];
+
+	bc_poll_sensor_raw_data(&raw_data);
+
+	sprintf(s, "%6d", raw_data.accel_x + accel_calib[0]);
+	bc_display_print(SM_TXT_OFFSET + 60, 2, &fixed_font8, s);
+
+	sprintf(s, "%6d", raw_data.accel_y + accel_calib[1]);
+	bc_display_print(SM_TXT_OFFSET + 60, 3, &fixed_font8, s);
+
+	sprintf(s, "%6d", raw_data.accel_z + accel_calib[2]);
+	bc_display_print(SM_TXT_OFFSET + 60, 4, &fixed_font8, s);
+
+	sprintf(s, "%6d", raw_data.gyro_x + gyro_calib[0]);
+	bc_display_print(SM_TXT_OFFSET + 60, 5, &fixed_font8, s);
+
+	sprintf(s, "%6d", raw_data.gyro_y + gyro_calib[1]);
+	bc_display_print(SM_TXT_OFFSET + 60, 6, &fixed_font8, s);
+
+	sprintf(s, "%6d", raw_data.gyro_z + gyro_calib[2]);
+	bc_display_print(SM_TXT_OFFSET + 60, 7, &fixed_font8, s);
+
+	return 0;
+}
+#pragma endregion
+
+#pragma region /* Display Inclinometer Mode calls */
 static int display_inclinometer_prepare(struct logic_mode *mode)
 {
 	bc_display_clear();

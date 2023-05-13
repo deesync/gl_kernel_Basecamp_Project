@@ -41,34 +41,42 @@ static int display_calib_prepare(struct logic_mode *mode);
 static int display_calib(struct logic_mode *mode);
 static int display_inclinometer_prepare(struct logic_mode *mode);
 static int display_inclinometer(struct logic_mode *mode);
+static int display_scanning_prepare(struct logic_mode *mode);
+static int display_scanning(struct logic_mode *mode);
 
 /* Modes init */
 static struct logic_mode modes[] = {
-	/* [0] -  Display Clinometer */
+	/* [0] - Clinometer */
 	{
 		.cycle_delay = 20,
 		.prepare = display_inclinometer_prepare,
 		.cycle = display_inclinometer,
 	},
-	/* [1] -  Display Raw Sensor Data */
+	/* [1] - Raw Sensor Data */
 	{
 		.cycle_delay = 50,
 		.prepare = display_raw_prepare,
 		.cycle = display_raw,
 	},
-	/* [2] -  Display Calibrated Sensor Data */
+	/* [2] - Calibrated Sensor Data */
 	{
 		.cycle_delay = 50,
 		.prepare = display_calib_prepare,
 		.cycle = display_calib,
 	},
+	/* [3] - Scanning Mode  */
+	{
+		.cycle_delay = 100,
+		.prepare = display_scanning_prepare,
+		.cycle = display_scanning,
+	},
 };
 
 /* State init */
 static struct logic_state state = {
-	.mode_count = (sizeof(modes) / sizeof(modes[0])),
+	.mode_count = ARRAY_SIZE(modes),
 	.current_mode = 0,
-	.hidden_modes = 0,
+	.hidden_modes = 1,
 };
 #pragma endregion
 
@@ -205,6 +213,31 @@ static int display_inclinometer(struct logic_mode *mode)
 
 	sprintf(s, "%4d", fxpt_atan2(clb.accel_x, clb.accel_z)*180 / FXPT_PI);
 	bc_display_print(55, 5, &lcd_font24, s);
+
+	return 0;
+}
+#pragma endregion
+
+#pragma region /* Display Scanning (Hidden) Mode calls */
+static int display_scanning_prepare(struct logic_mode *mode)
+{
+	bc_display_clear();
+
+	bc_display_print(25, 3, &fixed_font16, "Scanning");
+
+	return 0;
+}
+
+static int display_scanning(struct logic_mode *mode)
+{
+	static const char *frames[] = {
+		"    ", ".   ", "..  ", "... ", "....", " ...", "  ..", "   ."
+	};
+	static const size_t lst = ARRAY_SIZE(frames) - 1;
+	static int pos = 0;
+
+	bc_display_print(81, 3, &fixed_font16, (char *)frames[pos]);
+	pos = (pos >= lst) ? 0 : pos + 1;
 
 	return 0;
 }

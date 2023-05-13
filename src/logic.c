@@ -40,27 +40,25 @@ static int display_raw(struct logic_mode *mode);
 static int display_inclinometer_prepare(struct logic_mode *mode);
 static int display_inclinometer(struct logic_mode *mode);
 
-static struct logic_mode display_inclinometer_mode = {
-	.cycle_delay = 20,
-	.prepare = display_inclinometer_prepare,
-	.cycle = display_inclinometer,
-};
-
-static struct logic_mode display_raw_mode = {
-	.cycle_delay = 20,
-	.prepare = display_raw_prepare,
-	.cycle = display_raw,
-};
-
-static struct logic_mode *modes[] = {
-	&display_raw_mode,
-	&display_inclinometer_mode,
-	NULL
+/* Modes init */
+static struct logic_mode modes[] = {
+	/* [0] -  Display Raw Sensor Data */
+	{
+		.cycle_delay = 20,
+		.prepare = display_raw_prepare,
+		.cycle = display_raw,
+	},
+	/* [1] -  Display Clinometer */
+	{
+		.cycle_delay = 20,
+		.prepare = display_inclinometer_prepare,
+		.cycle = display_inclinometer,
+	},
 };
 
 /* State init */
 static struct logic_state state = {
-	.mode_count = (sizeof(modes) / sizeof(modes[0])) - 1,
+	.mode_count = (sizeof(modes) / sizeof(modes[0])),
 	.current_mode = 0,
 	.hidden_modes = 0,
 };
@@ -239,7 +237,7 @@ mode_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf,
 		return -EPERM;
 
 	state.current_mode = mode;
-	switch_mode(&state, modes[state.current_mode]);
+	switch_mode(&state, &modes[state.current_mode]);
 
 	return count;
 }
@@ -286,7 +284,7 @@ static irqreturn_t a_button_isr(int irq, void *dev_id)
 	if (jiffies - timestamp > BUTTON_DEBOUNCE_COOLDOWN) {
 		/* It's a light call. There's no need to schedule bottom half */
 		/* All heavy work will be done on the next work loop */
-		switch_mode(&state, modes[next_mode(&state)]);
+		switch_mode(&state, &modes[next_mode(&state)]);
 		timestamp = jiffies;
 	}
 
@@ -364,7 +362,7 @@ static int __init logic_mod_init(void)
 
 	/* Switching Mode */
 	pr_info(MP "number of modes: %d\n", state.mode_count);
-	ret = switch_mode(&state, modes[state.current_mode]);
+	ret = switch_mode(&state, &modes[state.current_mode]);
 	if (ret < 0) {
 		pr_err(MP "cannot switch mode\n");
 		goto r_irq;		

@@ -547,6 +547,6 @@ module_exit(logic_mod_exit);
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("Linux Kernel Bootcamp Project: Business Logic Module");
 MODULE_AUTHOR("Vlad Degtyarov <deesyync@gmail.com>");
-MODULE_VERSION("0.2");
+MODULE_VERSION("0.3");
 
 #pragma GCC diagnostic pop

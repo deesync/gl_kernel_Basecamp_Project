@@ -8,6 +8,7 @@
 #include <linux/gpio.h>
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
+#include <linux/math.h>
 
 #include "sensor/sensor_module.h"
 #include "display/display_module.h"
@@ -81,7 +82,7 @@ static struct logic_state state = {
 #pragma endregion
 
 
-#pragma region /* Display Raw Data Mode calls */
+#pragma region /* Raw Data Mode calls */
 
 static int display_raw_prepare(struct logic_mode *mode)
 {
@@ -132,7 +133,8 @@ static int display_raw(struct logic_mode *mode)
 }
 #pragma endregion
 
-#pragma region /* Display Calibrated Data Mode calls */
+
+#pragma region /* Calibrated Data Mode calls */
 
 static int display_calib_prepare(struct logic_mode *mode)
 {
@@ -179,46 +181,89 @@ static int display_calib(struct logic_mode *mode)
 }
 #pragma endregion
 
-#pragma region /* Display Inclinometer Mode calls */
+
+#pragma region /* Inclinometer Mode calls */
+
 static int display_inclinometer_prepare(struct logic_mode *mode)
 {
 	bc_display_clear();
 
 	bc_display_print(0, 0, &bolder_font16, "INCLINOMETER");
-	bc_display_print(5, 2, &fixed_font16, "Tilt Y:");
-	bc_display_print(5, 5, &fixed_font16, "Tilt X:");
+	bc_display_print(5, 2, &fixed_font16, "Pitch:");
+	bc_display_print(19, 5, &fixed_font16, "Yaw:");
 
 	return 0;
 }
 
+/*
+ * The function and macros below is implemented just for
+ * my particular case and only for demonstration purposes.
+ * Because sensor device (mpu6050) is oriented vertically
+ * alongside the bradboard, I measure pitch and yaw
+ */
+
+#define MULTIP 		10000
+#define K1 		1000
+#define K2 		(MULTIP - K1)
+
+#define comp_filter(next, prev, e)(					\
+{									\
+	if (!(e))							\
+		next = DIV_ROUND_CLOSEST(next*K1 + prev*K2, MULTIP);	\
+}									\
+)
+
+#define G_SENS		(131 * 1)	/* One degree filter sensitivity */
+
 static int display_inclinometer(struct logic_mode *mode)
 {
-	struct sensor_data raw_data;
-	struct sensor_data clb;
-	static char s[5];
+	int res;
 
-	bc_poll_sensor_raw_data(&raw_data);
+	static struct sensor_data raw_data;
+	static int ax, ay, az, ax_prev, ay_prev, az_prev;
+	static int gain_gx, gain_gy, gain_gz;
+	static int pitch_angle, yaw_angle;
 
-	clb.accel_x = raw_data.accel_x + accel_calib[0];
-	clb.accel_y = raw_data.accel_y + accel_calib[1];
-	clb.accel_z = raw_data.accel_z + accel_calib[2];
+	static char sbuf[5];
 
-	// angle += s_data.gyro_y/131*jiffies_to_msecs(jiffies-pin);
-	// pin = jiffies;
 
-	// stm32_atan2(s_data.accel_y, s_data.accel_x) / (CORDIC_PI / 180);
+	res = bc_poll_sensor_raw_data(&raw_data);
+	if (res < 0) {
+		pr_err(MP "cannot poll the sensor\n");
+		return res;
+	}
 
-	sprintf(s, "%4d", fxpt_atan2(clb.accel_y, clb.accel_x)*180 / FXPT_PI);
-	bc_display_print(55, 2, &lcd_font24, s);
+	ax = raw_data.accel_x + accel_calib[0];
+	ay = raw_data.accel_y + accel_calib[1];
+	az = raw_data.accel_z + accel_calib[2];
 
-	sprintf(s, "%4d", fxpt_atan2(clb.accel_x, clb.accel_z)*180 / FXPT_PI);
-	bc_display_print(55, 5, &lcd_font24, s);
+	gain_gx = (raw_data.gyro_x + gyro_calib[0]) / G_SENS;
+	gain_gy = (raw_data.gyro_y + gyro_calib[1]) / G_SENS;
+	gain_gz = (raw_data.gyro_z + gyro_calib[2]) / G_SENS;
+
+	comp_filter(ax, ax_prev, gain_gx);
+	ax_prev = ax;
+
+	comp_filter(ay, ay_prev, gain_gy);
+	ay_prev = ay;
+
+	comp_filter(az, az_prev, gain_gz);
+	az_prev = az;
+
+	pitch_angle = DIV_ROUND_CLOSEST(fxpt_atan2(ax, az) * 180, FXPT_PI);
+	sprintf(sbuf, "%4d", pitch_angle);
+	bc_display_print(55, 2, &lcd_font24, sbuf);
+
+	yaw_angle = DIV_ROUND_CLOSEST(fxpt_atan2(ay, ax) * 180, FXPT_PI);
+	sprintf(sbuf, "%4d", yaw_angle);
+	bc_display_print(55, 5, &lcd_font24, sbuf);
 
 	return 0;
 }
 #pragma endregion
 
-#pragma region /* Display Scanning (Hidden) Mode calls */
+
+#pragma region /* Scanning Mode (Hidden) calls */
 static int display_scanning_prepare(struct logic_mode *mode)
 {
 	bc_display_clear();

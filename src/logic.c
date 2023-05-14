@@ -102,14 +102,16 @@ static int display_raw_prepare(struct logic_mode *mode)
 
 static int display_raw(struct logic_mode *mode)
 {
+	int res;
+
 	struct sensor_data raw_data;
 	static char s[8];
 
-	bc_poll_sensor_raw_data(&raw_data);
-
-	// pr_info(", %6d, %6d, %6d, %6d, %6d, %6d\n",
-	// 	raw_data.accel_x, raw_data.accel_y, raw_data.accel_z,
-	// 	raw_data.gyro_x, raw_data.gyro_y, raw_data.gyro_z);
+	res = bc_poll_sensor_raw_data(&raw_data);
+	if (res < 0) {
+		pr_err(MP "cannot poll the sensor\n");
+		return res;
+	}
 
 	sprintf(s, "%6d", raw_data.accel_x);
 	bc_display_print(SM_TXT_OFFSET + 60, 2, &fixed_font8, s);
@@ -154,10 +156,16 @@ static int display_calib_prepare(struct logic_mode *mode)
 
 static int display_calib(struct logic_mode *mode)
 {
+	int res;
+
 	struct sensor_data raw_data;
 	static char s[8];
 
-	bc_poll_sensor_raw_data(&raw_data);
+	res = bc_poll_sensor_raw_data(&raw_data);
+	if (res < 0) {
+		pr_err(MP "cannot poll the sensor\n");
+		return res;
+	}
 
 	sprintf(s, "%6d", raw_data.accel_x + accel_calib[0]);
 	bc_display_print(SM_TXT_OFFSET + 60, 2, &fixed_font8, s);

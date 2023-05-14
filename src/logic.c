@@ -19,8 +19,8 @@
 
 /* Module parameters */
 static int a_button_pin = DEFAULT_A_BUTTON_GPIO_PIN;
-static int accel_calib[3] = { 0, 0, 0 };
-static int gyro_calib[3] = { 0, 0, 0 };
+static int accel_calib[3];
+static int gyro_calib[3];
 
 module_param(a_button_pin, int, 0);
 MODULE_PARM_DESC(a_button_pin, "Action button GPIO pin");
@@ -210,9 +210,9 @@ static int display_inclinometer_prepare(struct logic_mode *mode)
  * alongside the bradboard, I measure pitch and yaw
  */
 
-#define MULTIP 		10000
-#define K1 		1000
-#define K2 		(MULTIP - K1)
+#define MULTIP		10000
+#define K1		1000
+#define K2		(MULTIP - K1)
 
 #define comp_filter(next, prev, e)(					\
 {									\
@@ -283,14 +283,14 @@ static int display_scanning_prepare(struct logic_mode *mode)
 
 static int display_scanning(struct logic_mode *mode)
 {
-	static const char *frames[] = {
+	static const char * const frames[] = {
 		"    ", ".   ", "..  ", "... ", "....", " ...", "  ..", "   ."
 	};
-	static const size_t lst = ARRAY_SIZE(frames) - 1;
-	static int pos = 0;
+	static const size_t last = ARRAY_SIZE(frames) - 1;
+	static int pos;
 
 	bc_display_print(81, 3, &fixed_font16, (char *)frames[pos]);
-	pos = (pos >= lst) ? 0 : pos + 1;
+	pos = (pos >= last) ? 0 : pos + 1;
 
 	return 0;
 }
@@ -367,7 +367,7 @@ mode_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 	return sprintf(buf, "%d\n", state.current_mode);
 }
 
-static ssize_t 
+static ssize_t
 mode_store(struct kobject *kobj, struct kobj_attribute *attr, const char *buf,
 	   size_t count)
 {
@@ -505,7 +505,7 @@ static int __init logic_mod_init(void)
 	ret = switch_mode(&state, &modes[state.current_mode]);
 	if (ret < 0) {
 		pr_err(MP "cannot switch mode\n");
-		goto r_irq;		
+		goto r_irq;
 	}
 
 	/* Scheduling refresh loop */

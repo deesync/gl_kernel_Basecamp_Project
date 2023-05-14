@@ -19,13 +19,14 @@
 struct i2c_client *mpu6050_client;
 
 /**
- * bc_poll_sensor_raw_data - polling sensor registers and filling data structure
- *                           with raw data of accelerometer and gyroscope
+ * bc_poll_sensor_raw_data - poll sensor registers
  * @data: data structure pointer
  *
- * implementation for MPU-6050 I2C Device
+ * Polling sensor registers and filling data structure
+ * with raw data of accelerometer and gyroscope.
+ * Implementation for MPU-6050 I2C Device
  *
- * return value: 0 on successful poll, error code if otherwise.
+ * Return: 0 on successful poll, error code if otherwise.
  */
 int bc_poll_sensor_raw_data(struct sensor_data *data)
 {
@@ -57,13 +58,14 @@ int bc_poll_sensor_raw_data(struct sensor_data *data)
 EXPORT_SYMBOL(bc_poll_sensor_raw_data);
 
 /**
- * bc_poll_sensor_raw_value - getting sensor's register value
+ * bc_poll_sensor_raw_value - get sensor's register value
  * @value: pointer to 16 bit value (being written as result of poll)
  * @type: type of data (see enum sensor_value in header file)
  *
- * implementation for MPU-6050 I2C Device
+ * Getting sensor's register value.
+ * Implementation for MPU-6050 I2C Device
  *
- * return value: 0 on successful poll, error code if otherwise.
+ * Return: 0 on successful poll, error code if otherwise.
  */
 int bc_poll_sensor_raw_value(s16 *value, enum sensor_value type)
 {
@@ -79,12 +81,13 @@ int bc_poll_sensor_raw_value(s16 *value, enum sensor_value type)
 EXPORT_SYMBOL(bc_poll_sensor_raw_value);
 
 /**
- * bc_poll_sensor_temperature - getting sensor's temperature
- * @temperature: pointer to 16 bit value of temperature in celsius degrees
+ * bc_poll_sensor_temperature - get sensor's temperature
+ * @temperature: pointer to 16 bit value of temperature
  *
- * implementation for MPU-6050 I2C Device
+ * Getting sensor's temperature in celsius degrees.
+ * Implementation for MPU-6050 I2C Device
  *
- * return value: 0 on successful poll, error code if otherwise.
+ * Return: 0 on successful poll, error code if otherwise.
  */
 int bc_poll_sensor_temperature(s16 *temperature)
 {

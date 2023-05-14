@@ -57,10 +57,11 @@ static int display_clear(void)
 }
 
 /**
- * display_clear - clears display (filling all GDDRAM with zeroes)
+ * bc_display_clear - clears display
  *
- * Returning negative errno
- * else zero on success.
+ * Clears display filling all GDDRAM with zeroes
+ *
+ * Return: 0 on success. Error code on error.
  */
 int bc_display_clear(void)
 {
@@ -75,8 +76,7 @@ EXPORT_SYMBOL(bc_display_clear);
  * @font: Pointer to font data
  * @str: String to print
  *
- * Returning negative errno
- * else zero on success.d.
+ * Return: 0 on success. Error code on error.
  */
 int bc_display_print(u8 offset, u8 line,
 		     const struct display_font_t *font, char *str)

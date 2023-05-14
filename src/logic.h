@@ -22,7 +22,7 @@
 #define A_BUTTON_IRQ_LABEL		LOGIC_NAME ": action button"
 #define BUTTON_DEBOUNCE_COOLDOWN	(HZ/2)
 
-#define SM_TXT_OFFSET 			16
+#define SM_TXT_OFFSET			16
 
 struct logic_mode {
 	int cycle_delay;

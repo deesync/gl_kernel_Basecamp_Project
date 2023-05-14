@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: GPL */
+
 #ifndef _FXPT_MATH_H_
 #define _FXPT_MATH_H_
 

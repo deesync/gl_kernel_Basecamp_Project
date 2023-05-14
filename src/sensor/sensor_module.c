@@ -19,7 +19,7 @@
 struct i2c_client *mpu6050_client;
 
 /**
- * bc_poll_sensor_raw_data - polling sensor registers and filling data structure 
+ * bc_poll_sensor_raw_data - polling sensor registers and filling data structure
  *                           with raw data of accelerometer and gyroscope
  * @data: data structure pointer
  *

@@ -132,9 +132,9 @@ static int mpu6050_probe(struct i2c_client *drv_client,
 		ret);
 
 	/* Setup the device */
-	// i2c_smbus_write_byte_data(drv_client, REG_CONFIG, 5);
-	// i2c_smbus_write_byte_data(drv_client, REG_GYRO_CONFIG, 0x18);
-	// i2c_smbus_write_byte_data(drv_client, REG_ACCEL_CONFIG, 0x18);
+	// i2c_smbus_write_byte_data(drv_client, REG_CONFIG, 0x05);
+	i2c_smbus_write_byte_data(drv_client, REG_GYRO_CONFIG, 0);
+	i2c_smbus_write_byte_data(drv_client, REG_ACCEL_CONFIG, 0);
 	i2c_smbus_write_byte_data(drv_client, REG_PWR_MGMT_1, 0);
 
 	mpu6050_client = drv_client;

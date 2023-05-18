@@ -5,10 +5,12 @@
 
 #include <linux/types.h>
 
-#define LOGIC_NAME			"inclinometer"
-#define INIT_DELAY			1000
+#define INIT_DELAY			500
 
-#define SYSFS_NAME			LOGIC_NAME
+#define LOGIC_CLASS			"bc_project"
+#define LOGIC_DEVICE			"inclinometer"
+#define SYSFS_ENTRY			"attr"
+
 #define ACCEL_X_SYSFS_ATTR		accel_x
 #define ACCEL_Y_SYSFS_ATTR		accel_y
 #define ACCEL_Z_SYSFS_ATTR		accel_z
@@ -19,7 +21,7 @@
 #define MODE_SYSFS_ATTR			mode
 
 #define DEFAULT_A_BUTTON_GPIO_PIN	26
-#define A_BUTTON_IRQ_LABEL		LOGIC_NAME ": action button"
+#define A_BUTTON_IRQ_LABEL		LOGIC_DEVICE ": action button"
 #define BUTTON_DEBOUNCE_COOLDOWN	(HZ/2)
 
 #define SM_TXT_OFFSET			16

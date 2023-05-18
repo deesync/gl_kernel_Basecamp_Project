@@ -556,17 +556,37 @@ static void refresh(struct work_struct *work)
 			      msecs_to_jiffies(state.mode->cycle_delay));
 }
 
+
+static struct class *module_class;
+static struct device *module_device;
+
 static int __init logic_mod_init(void)
 {
 	int ret;
 
 	pr_info(MP "initialization...\n");
 
-	/* Creating sysfs kobj */
-	state.kobj = kobject_create_and_add(SYSFS_NAME, NULL);
+	/* Creating device class */
+	module_class = class_create(THIS_MODULE, LOGIC_CLASS);
+	if (IS_ERR(module_class)) {
+		pr_err(MP "cannot create device class\n");
+		return PTR_ERR(module_class);
+	}
+
+	/* Creating device */
+	module_device = device_create(module_class, NULL, 0, NULL, LOGIC_DEVICE);
+	if (IS_ERR(module_device)) {
+		pr_err(MP "cannot create device\n");
+		ret = PTR_ERR(module_device);
+		goto r_class;
+	}
+
+	/* Creating kobject */
+	state.kobj = kobject_create_and_add(SYSFS_ENTRY, &module_device->kobj);
 	if (!state.kobj) {
 		pr_err(MP "cannot create kobject\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto r_dev;
 	}
 
 	/* Creating sysfs group */
@@ -575,10 +595,12 @@ static int __init logic_mod_init(void)
 		pr_err(MP "cannot create sysfs group\n");
 		goto r_kobj;
 	}
-	pr_info(MP "sysfs interface created at /sys/%s\n", SYSFS_NAME);
+	pr_info(MP "sysfs attributes created at /sys/class/%s/%s/%s\n",
+		LOGIC_CLASS, LOGIC_DEVICE, state.kobj->name);
 
 	/* Checking validity of GPIO pin */
 	if (!gpio_is_valid(a_button_pin)) {
+		ret = -EIO;
 		pr_err(MP "GPIO %d is not valid\n", a_button_pin);
 		goto r_sysfs;
 	}
@@ -634,6 +656,10 @@ r_sysfs:
 	sysfs_remove_group(state.kobj, &attr_group);
 r_kobj:
 	kobject_put(state.kobj);
+r_dev:
+	device_destroy(module_class, 0);
+r_class:
+	class_destroy(module_class);
 
 	return ret;
 }
@@ -645,8 +671,12 @@ static void __exit logic_mod_exit(void)
 
 	free_irq(gpio_to_irq(a_button_pin), NULL);
 	gpio_free(a_button_pin);
+
 	sysfs_remove_group(state.kobj, &attr_group);
 	kobject_put(state.kobj);
+
+	device_destroy(module_class, 0);
+	class_destroy(module_class);
 
 	pr_info(MP "module removed\n");
 }

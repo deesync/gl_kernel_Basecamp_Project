@@ -1,6 +1,4 @@
 /*
- * fxpt_atan2.c
- *
  * Copyright (C) 2012, Xo Wang
  *
  * Hacked up to be a bit more ARM-friendly by:
@@ -29,7 +27,7 @@
 #include <linux/types.h>
 #include "fxpt_math.h"
 
-/**
+/*
  * Q15 (1.0.15 fixed point) multiplication. Various common rounding modes are in
  * the function definition for reference (and preference).
  *
@@ -40,17 +38,20 @@
 static inline int32_t q15_mul(const int32_t j, const int32_t k)
 {
 	const int32_t intermediate = j * k;
-#if 0 // don't round
-	return intermediate >> 15;
-#elif 0 // biased rounding
-	return (intermediate + 0x4000) >> 15;
-#else // unbiased rounding
+
+// #if 0 // don't round
+//	return intermediate >> 15;
+// #elif 0 // biased rounding
+//	return (intermediate + 0x4000) >> 15;
+// #else // unbiased rounding
+
 	return (intermediate +
 		((intermediate & 0x7FFF) == 0x4000 ? 0 : 0x4000)) >> 15;
-#endif
+
+// #endif
 }
 
-/**
+/*
  * Q15 (1.0.15 fixed point) division (non-saturating). Be careful when using
  * this function, as it does not behave well when the result is out-of-range.
  *
@@ -65,7 +66,7 @@ static inline int32_t q15_div(const int32_t numer, const int32_t denom)
 	return (numer << 15) / denom;
 }
 
-/**
+/*
  * 16-bit fixed point four-quadrant arctangent. Given some Cartesian vector
  * (x, y), find the angle subtended by the vector and the positive x-axis.
  *

@@ -57,13 +57,13 @@ static struct logic_mode modes[] = {
 		.prepare = display_inclinometer_prepare,
 		.cycle = display_inclinometer,
 	},
-	/* [1] - Accelerometer Data */
+	/* [1] - Accelerometer */
 	{
 		.cycle_delay = 99,
 		.prepare = display_accel_prepare,
 		.cycle = display_accel,
 	},
-	/* [2] - Gyroscope Data */
+	/* [2] - Gyroscope */
 	{
 		.cycle_delay = 50,
 		.prepare = display_gyro_prepare,
@@ -287,7 +287,7 @@ static int display_inclinometer(struct logic_mode *mode)
 #pragma endregion
 
 
-#pragma region /* Accelerometer Data Mode calls */
+#pragma region /* Accelerometer Mode calls */
 
 static int display_accel_prepare(struct logic_mode *mode)
 {
@@ -337,7 +337,7 @@ static int display_accel(struct logic_mode *mode)
 #pragma endregion
 
 
-#pragma region /* Gyroscope Data Mode calls */
+#pragma region /* Gyroscope Mode calls */
 
 static int display_gyro_prepare(struct logic_mode *mode)
 {

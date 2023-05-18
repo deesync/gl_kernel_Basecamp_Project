@@ -57,7 +57,7 @@ static int display_clear(void)
 }
 
 /**
- * bc_display_clear - clears display
+ * bc_display_clear() - clears display
  *
  * Clears display filling all GDDRAM with zeroes
  *
@@ -70,7 +70,7 @@ int bc_display_clear(void)
 EXPORT_SYMBOL(bc_display_clear);
 
 /**
- * bc_display_print - prints the text with selected font
+ * bc_display_print() - prints the text with selected font
  * @offset: Left indent in sectors. One sector is 1 px
  * @line: Top indent in pages. One page height is 8 px
  * @font: Pointer to font data
@@ -225,7 +225,6 @@ static int ssd1306_probe(struct i2c_client *drv_client,
 	ssd1306_i2c_cmd(SSD1306_DEACTIVATE_SCROLL);
 
 	/* Clear display */
-	//ssd1306_fill(0x00);
 	display_clear();
 
 	/* Display ON in normal mode */

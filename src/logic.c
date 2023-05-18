@@ -44,28 +44,44 @@ static int display_inclinometer_prepare(struct logic_mode *mode);
 static int display_inclinometer(struct logic_mode *mode);
 static int display_scanning_prepare(struct logic_mode *mode);
 static int display_scanning(struct logic_mode *mode);
+static int display_accel_prepare(struct logic_mode *mode);
+static int display_accel(struct logic_mode *mode);
+static int display_gyro_prepare(struct logic_mode *mode);
+static int display_gyro(struct logic_mode *mode);
 
 /* Modes init */
 static struct logic_mode modes[] = {
 	/* [0] - Clinometer */
 	{
-		.cycle_delay = 20,
+		.cycle_delay = 25,
 		.prepare = display_inclinometer_prepare,
 		.cycle = display_inclinometer,
 	},
-	/* [1] - Raw Sensor Data */
+	/* [1] - Accelerometer Data */
+	{
+		.cycle_delay = 99,
+		.prepare = display_accel_prepare,
+		.cycle = display_accel,
+	},
+	/* [2] - Gyroscope Data */
+	{
+		.cycle_delay = 50,
+		.prepare = display_gyro_prepare,
+		.cycle = display_gyro,
+	},
+	/* [3] - Raw Sensor Data */
 	{
 		.cycle_delay = 50,
 		.prepare = display_raw_prepare,
 		.cycle = display_raw,
 	},
-	/* [2] - Calibrated Sensor Data */
+	/* [4] - Calibrated Sensor Data */
 	{
 		.cycle_delay = 50,
 		.prepare = display_calib_prepare,
 		.cycle = display_calib,
 	},
-	/* [3] - Scanning Mode  */
+	/* [5] - Scanning Mode  */
 	{
 		.cycle_delay = 100,
 		.prepare = display_scanning_prepare,
@@ -204,7 +220,7 @@ static int display_inclinometer_prepare(struct logic_mode *mode)
 }
 
 /*
- * The function and macros below is implemented just for
+ * The function and macros below are implemented just for
  * my particular case and only for demonstration purposes.
  * Because sensor device (mpu6050) is oriented vertically
  * alongside the bradboard, I measure pitch and yaw
@@ -265,6 +281,100 @@ static int display_inclinometer(struct logic_mode *mode)
 	yaw_angle = DIV_ROUND_CLOSEST(fxpt_atan2(ay, ax) * 180, FXPT_PI);
 	sprintf(sbuf, "%4d", yaw_angle);
 	bc_display_print(55, 5, &lcd_font24, sbuf);
+
+	return 0;
+}
+#pragma endregion
+
+
+#pragma region /* Accelerometer Data Mode calls */
+
+static int display_accel_prepare(struct logic_mode *mode)
+{
+	bc_display_clear();
+
+	bc_display_print(18, 0, &fixed_font16, "Accelerometer");
+
+	bc_display_print(18, 2, &fixed_font16, "Accel X:");
+	bc_display_print(18, 4, &fixed_font16, "Accel Y:");
+	bc_display_print(18, 6, &fixed_font16, "Accel Z:");
+
+	return 0;
+}
+
+#define TO_G 0x4000
+
+/* Display Accel Data in percentage of 1 g force */
+static int display_accel(struct logic_mode *mode)
+{
+	int res;
+
+	struct sensor_data raw_data;
+	static int ax, ay, az;
+	static char s[5];
+
+	res = bc_poll_sensor_raw_data(&raw_data);
+	if (res < 0) {
+		pr_err(MP "cannot poll the sensor\n");
+		return res;
+	}
+
+	ax = DIV_ROUND_CLOSEST((raw_data.accel_x + accel_calib[0]) * 100, TO_G);
+	ay = DIV_ROUND_CLOSEST((raw_data.accel_y + accel_calib[1]) * 100, TO_G);
+	az = DIV_ROUND_CLOSEST((raw_data.accel_z + accel_calib[2]) * 100, TO_G);
+
+	sprintf(s, "%4d", ax);
+	bc_display_print(81, 2, &fixedb_font16, s);
+
+	sprintf(s, "%4d", ay);
+	bc_display_print(81, 4, &fixedb_font16, s);
+
+	sprintf(s, "%4d", az);
+	bc_display_print(81, 6, &fixedb_font16, s);
+
+	return 0;
+}
+#pragma endregion
+
+
+#pragma region /* Gyroscope Data Mode calls */
+
+static int display_gyro_prepare(struct logic_mode *mode)
+{
+	bc_display_clear();
+
+	bc_display_print(32, 0, &fixed_font16, "Gyroscope");
+
+	bc_display_print(22, 2, &fixed_font16, "Gyro X:");
+	bc_display_print(22, 4, &fixed_font16, "Gyro Y:");
+	bc_display_print(22, 6, &fixed_font16, "Gyro Z:");
+
+	return 0;
+}
+
+#define TO_DEGEREE 131
+
+static int display_gyro(struct logic_mode *mode)
+{
+	int res;
+
+	struct sensor_data raw_data;
+	static char s[5];
+
+	res = bc_poll_sensor_raw_data(&raw_data);
+	if (res < 0) {
+		pr_err(MP "cannot poll the sensor\n");
+		return res;
+	}
+
+	sprintf(s, "%4d", (raw_data.gyro_x + gyro_calib[0]) / TO_DEGEREE);
+	bc_display_print(78, 2, &fixedb_font16, s);
+
+	sprintf(s, "%4d", (raw_data.gyro_y + gyro_calib[1]) / TO_DEGEREE);
+	bc_display_print(78, 4, &fixedb_font16, s);
+
+	sprintf(s, "%4d", (raw_data.gyro_z + gyro_calib[2]) / TO_DEGEREE);
+	bc_display_print(78, 6, &fixedb_font16, s);
 
 	return 0;
 }

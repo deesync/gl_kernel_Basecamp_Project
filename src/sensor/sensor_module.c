@@ -7,6 +7,7 @@
 #include <linux/err.h>
 #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
+#include <linux/math.h>
 
 #include "sensor_module.h"
 
@@ -19,7 +20,7 @@
 struct i2c_client *mpu6050_client;
 
 /**
- * bc_poll_sensor_raw_data - poll sensor registers
+ * bc_poll_sensor_raw_data() - poll sensor registers
  * @data: data structure pointer
  *
  * Polling sensor registers and filling data structure
@@ -58,7 +59,7 @@ int bc_poll_sensor_raw_data(struct sensor_data *data)
 EXPORT_SYMBOL(bc_poll_sensor_raw_data);
 
 /**
- * bc_poll_sensor_raw_value - get sensor's register value
+ * bc_poll_sensor_raw_value() - get sensor's register value
  * @value: pointer to 16 bit value (being written as result of poll)
  * @type: type of data (see enum sensor_value in header file)
  *
@@ -81,7 +82,7 @@ int bc_poll_sensor_raw_value(s16 *value, enum sensor_value type)
 EXPORT_SYMBOL(bc_poll_sensor_raw_value);
 
 /**
- * bc_poll_sensor_temperature - get sensor's temperature
+ * bc_poll_sensor_temperature() - get sensor's temperature
  * @temperature: pointer to 16 bit value of temperature
  *
  * Getting sensor's temperature in celsius degrees.
@@ -99,7 +100,7 @@ int bc_poll_sensor_temperature(s16 *temperature)
 	}
 
 	temp = (s16)i2c_smbus_read_word_swapped(mpu6050_client, REG_TEMP_OUT_H);
-	*temperature = (temp + 12420) / 340;
+	*temperature = DIV_ROUND_CLOSEST(temp + 12420, 340);
 
 	return 0;
 }

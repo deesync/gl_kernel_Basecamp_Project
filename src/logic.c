@@ -223,7 +223,7 @@ static int display_inclinometer_prepare(struct logic_mode *mode)
  * The function and macros below are implemented just for
  * my particular case and only for demonstration purposes.
  * Because sensor device (mpu6050) is oriented vertically
- * alongside the bradboard, I measure pitch and yaw
+ * alongside the breadboard, I measure pitch and yaw
  */
 
 #define MULTIP		10000

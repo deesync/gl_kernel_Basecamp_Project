@@ -70,7 +70,7 @@ while true; do
 
 	echo
 	echo "Set your device still in proper orientation..."
-	read -p "(S) to scan or (X) to exit: " ans
+	read -p "Type (S) to scan or (X) to exit: " ans
 	
 	case $ans in
 	[Xx])

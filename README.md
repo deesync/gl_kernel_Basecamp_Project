@@ -13,4 +13,4 @@ The MPU6050 is a 6-axis gyroscope and accelerometer sensor module. It can measur
 
 The SSD1306 is a single-chip CMOS OLED/PLED driver with controller for organic/polymer light emitting diode dot-matrix graphic display system. It consists of 128 segments and 64 commons.
 
-**You can find more information in the presentation**
+**You can find more information in the [presentation](/Presentation/Project%20Presentation.pdf).**
